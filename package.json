@@ -1,0 +1,25 @@
+{
+  "name": "cap",
+  "version": "1.0.0",
+  "description": "AI-powered commit message generator",
+  "type": "module",
+  "bin": {
+    "cap": "./cap"
+  },
+  "scripts": {
+    "setup": "bun run scripts/build-encrypt.ts",
+    "compile": "bun build src/index.ts --compile --outfile cap",
+    "build": "bun run compile",
+    "build:encrypt": "bun run setup && bun run compile",
+    "install:global": "bun run build && ./install.sh",
+    "dev": "bun run src/index.ts"
+  },
+  "dependencies": {
+    "@earendil-works/pi-ai": "^0.75.3",
+    "enquirer": "^2.4.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}
