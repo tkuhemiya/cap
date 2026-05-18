@@ -5,9 +5,8 @@ import { getModel, complete, type Context, type UserMessage } from "@earendil-wo
 import { decryptApiKey, PROVIDER, MODEL } from "./encrypted-config";
 
 function getConfig() {
-  // Binary must have encrypted config built in
   if (!PROVIDER || !MODEL) {
-    console.error("❌ No encrypted API key found in binary.");
+    console.error("No encrypted API key found in binary.");
     console.error("   Run: bun run setup");
     console.error("   Then: bun run build && bun run install:global");
     process.exit(1);
@@ -31,16 +30,14 @@ async function getGitContext() {
     .split("\n")
     .filter(Boolean);
 
-  // Get commit history (may fail if no commits yet)
   let history: string[] = [];
   try {
     const historyOutput = execSync('git log --pretty=format:"%s" -n 10', { 
       encoding: "utf-8",
-      stdio: ["pipe", "pipe", "ignore"] // Suppress stderr
+      stdio: ["pipe", "pipe", "ignore"]
     });
     history = historyOutput.trim().split("\n").filter(Boolean);
   } catch {
-    // No commits yet, use empty history
     history = ["Initial commit"];
   }
 
@@ -49,7 +46,7 @@ async function getGitContext() {
 
 function buildPrompt(ctx: { diff: string; files: string[]; history: string[] }): string {
   return `
-write the most unhinged commit message, in the style of gen z, based on these changes. Use git to make the commit.
+Write the most unhinged commit message, in the style of gen z, based on the changes.
 
 Files: ${ctx.files.join(", ")}
 
@@ -61,13 +58,44 @@ ${ctx.diff}
 Recent commits:
 ${ctx.history.join("\n")}
 
-Rules:
-- Format: type(scope): subject (body optional)
-- Types: feat, fix, docs, style, refactor, test, chore, perf (in genz terms)
-- Subject: imperative, lowercase, no period, under 72 chars
-- Body: explain WHY if needed
+Rules for commit message:
+1. First line (subject): type(scope): description
+   - Types: feat, fix, docs, style, refactor, test, chore, perf
+   - Max 72 characters
+   - Imperative mood, lowercase, no period
 
-Output ONLY the commit message.`;
+2. Second line: blank
+
+3. Remaining lines (body): Explain WHAT changed and WHY
+   - Wrap at 72 characters
+   - Use bullet points for multiple changes
+   - Be specific but concise
+
+If the changes are simple/trivial, you may omit the body.
+
+Respond with ONLY the commit message, nothing else.`;
+}
+
+function parseCommitMessage(fullMessage: string): { subject: string; body: string } {
+  const lines = fullMessage.trim().split("\n");
+  const subject = lines[0].trim();
+  
+  // Skip blank line after subject, join rest as body
+  const bodyLines: string[] = [];
+  let foundBlankLine = false;
+  
+  for (let i = 1; i < lines.length; i++) {
+    if (!foundBlankLine && lines[i].trim() === "") {
+      foundBlankLine = true;
+      continue;
+    }
+    if (foundBlankLine) {
+      bodyLines.push(lines[i]);
+    }
+  }
+  
+  const body = bodyLines.join("\n").trim();
+  return { subject, body };
 }
 
 function createUserMessage(content: string): UserMessage {
@@ -92,10 +120,10 @@ async function main() {
       throw new Error(`Model ${config.provider}/${config.modelId} not found`);
     }
 
-    console.log("📝 Generating...");
+    console.log("📝 Generating commit message...");
     
     const context: Context = {
-      systemPrompt: "You write clear, concise commit messages.",
+      systemPrompt: "You are an expert at writing clear, conventional commit messages.",
       messages: [createUserMessage(buildPrompt(ctx))],
     };
 
@@ -106,17 +134,33 @@ async function main() {
       .map(c => (c as any).text)
       .join("");
     
-    const message = text.trim();
+    const { subject, body } = parseCommitMessage(text);
     
-    console.log("\n" + "=".repeat(50));
-    console.log(message);
-    console.log("=".repeat(50) + "\n");
+    // Display the message
+    console.log("\n" + "=".repeat(60));
+    console.log(subject);
+    if (body) {
+      console.log();
+      console.log(body);
+    }
+    console.log("=".repeat(60) + "\n");
 
-    execSync(`git commit -m "${message.replace(/"/g, '\\"')}"`, { stdio: "inherit" });
-    console.log("Done");
+    // Build commit command
+    let commitCommand: string;
+    if (body) {
+      // Multi-line commit: subject + body
+      const fullMessage = `${subject}\n\n${body}`;
+      commitCommand = `git commit -m "${fullMessage.replace(/"/g, '\\"')}"`;
+    } else {
+      // Single line commit
+      commitCommand = `git commit -m "${subject.replace(/"/g, '\\"')}"`;
+    }
+
+    execSync(commitCommand, { stdio: "inherit" });
+    console.log("✅ Committed!");
 
   } catch (err) {
-    console.error(err instanceof Error ? err.message : err);
+    console.error("❌", err instanceof Error ? err.message : err);
     process.exit(1);
   }
 }
