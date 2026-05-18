@@ -48,7 +48,8 @@ async function getGitContext() {
 }
 
 function buildPrompt(ctx: { diff: string; files: string[]; history: string[] }): string {
-  return `Write a conventional commit message for these changes.
+  return `
+write the most unhinged commit message, in the style of gen z, based on these changes. Use git to make the commit.
 
 Files: ${ctx.files.join(", ")}
 
@@ -62,7 +63,7 @@ ${ctx.history.join("\n")}
 
 Rules:
 - Format: type(scope): subject (body optional)
-- Types: feat, fix, docs, style, refactor, test, chore, perf
+- Types: feat, fix, docs, style, refactor, test, chore, perf (in genz terms)
 - Subject: imperative, lowercase, no period, under 72 chars
 - Body: explain WHY if needed
 
@@ -112,10 +113,10 @@ async function main() {
     console.log("=".repeat(50) + "\n");
 
     execSync(`git commit -m "${message.replace(/"/g, '\\"')}"`, { stdio: "inherit" });
-    console.log("✅ Done");
+    console.log("Done");
 
   } catch (err) {
-    console.error("❌", err instanceof Error ? err.message : err);
+    console.error(err instanceof Error ? err.message : err);
     process.exit(1);
   }
 }
