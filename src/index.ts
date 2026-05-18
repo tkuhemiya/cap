@@ -1,6 +1,6 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
-import { execSync } from "child_process";
+import { $ } from "bun";
 import { getModel, complete, type Context, type UserMessage } from "@earendil-works/pi-ai";
 import { decryptApiKey, PROVIDER, MODEL } from "./encrypted-config";
 
@@ -19,24 +19,39 @@ function getConfig() {
   };
 }
 
+async function runGit(args: string[]): Promise<string> {
+  const proc = Bun.spawn(["git", ...args], {
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const output = await new Response(proc.stdout).text();
+  const err = await new Response(proc.stderr).text();
+  const exitCode = await proc.exited;
+  
+  if (exitCode !== 0) {
+    throw new Error(err || `git ${args.join(" ")} failed`);
+  }
+  return output;
+}
+
 async function getGitContext() {
-  const diff = execSync("git diff --cached", { encoding: "utf-8" });
+  const diff = await runGit(["diff", "--cached"]);
+  
   if (!diff.trim()) {
     throw new Error("No staged changes. Run 'git add' first.");
   }
 
-  const files = execSync("git diff --cached --name-only", { encoding: "utf-8" })
+  const files = (await runGit(["diff", "--cached", "--name-only"]))
     .trim()
     .split("\n")
     .filter(Boolean);
 
   let history: string[] = [];
   try {
-    const historyOutput = execSync('git log --pretty=format:"%s" -n 10', { 
-      encoding: "utf-8",
-      stdio: ["pipe", "pipe", "ignore"]
-    });
-    history = historyOutput.trim().split("\n").filter(Boolean);
+    history = (await runGit(["log", "--pretty=format:%s", "-n", "10"]))
+      .trim()
+      .split("\n")
+      .filter(Boolean);
   } catch {
     history = ["Initial commit"];
   }
@@ -142,18 +157,12 @@ async function main() {
     }
     console.log("=".repeat(60) + "\n");
 
-    // Build commit command
-    let commitCommand: string;
+    // Commit with Bun shell - handles escaping automatically
     if (body) {
-      // Multi-line commit: subject + body
-      const fullMessage = `${subject}\n\n${body}`;
-      commitCommand = `git commit -m "${fullMessage.replace(/"/g, '\\"')}"`;
+      await $`git commit -m ${subject} -m ${body}`;
     } else {
-      // Single line commit
-      commitCommand = `git commit -m "${subject.replace(/"/g, '\\"')}"`;
+      await $`git commit -m ${subject}`;
     }
-
-    execSync(commitCommand, { stdio: "inherit" });
     console.log("✅ Committed!");
 
   } catch (err) {
