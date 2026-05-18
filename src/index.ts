@@ -59,14 +59,11 @@ Recent commits:
 ${ctx.history.join("\n")}
 
 Rules for commit message:
-1. First line (subject): type(scope): description
-   - Types: feat, fix, docs, style, refactor, test, chore, perf
-   - Max 72 characters
-   - Imperative mood, lowercase, no period
+1. First line (subject): type(scope): description all in genz terms
 
 2. Second line: blank
 
-3. Remaining lines (body): Explain WHAT changed and WHY
+3. Remaining lines (body): Explain WHAT changed and WHY in more serious terms
    - Wrap at 72 characters
    - Use bullet points for multiple changes
    - Be specific but concise
