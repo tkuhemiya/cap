@@ -47,6 +47,13 @@ scripts/
   build-encrypt.ts      # Interactive setup script
 ```
 
+## Security
+
+**NOT SECURE!!!**
+The API key is encrypted with AES-256-GCM and embedded in the binary. anyone with the binary can extract your API key with enough effort.
+
+Use at your own risk. If someone takes the time to reverse engineer the binary, they deserve the key more than you do.
+
 ## Uninstall
 
 ```bash
