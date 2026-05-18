@@ -75,7 +75,7 @@ ${ctx.history.join("\n")}
 
 Rules for commit message:
 1. First line (subject): type(scope): description all in genz terms
-
+	- avoid saying no cap(scope)
 2. Second line: blank
 
 3. Remaining lines (body): Explain WHAT changed and WHY in more serious terms
