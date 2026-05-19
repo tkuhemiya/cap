@@ -61,7 +61,7 @@ async function getGitContext() {
 
 function buildPrompt(ctx: { diff: string; files: string[]; history: string[] }): string {
   return `
-Write the most unhinged commit message, in the style of gen z, based on the changes.
+Generate a single conventional commit message based on the provided context.
 
 Files: ${ctx.files.join(", ")}
 
@@ -73,19 +73,20 @@ ${ctx.diff}
 Recent commits:
 ${ctx.history.join("\n")}
 
-Rules for commit message:
-1. First line (subject): type(scope): description all in genz terms
-	- avoid saying no cap(scope)
-2. Second line: blank
+Requirements
+- Follow Conventional Commits format: type(scope): short description
+- Scope should reflect the affected area (or be omitted if unclear)
+- Subject line must be concise and imperative
 
-3. Remaining lines (body): Explain WHAT changed and WHY in more serious terms
-   - Wrap at 72 characters
-   - Use bullet points for multiple changes
-   - Be specific but concise
+Body (optional)
+- Include only if necessary to explain non-obvious changes
+- Explain WHAT changed and WHY (not HOW)
+- Use bullet points if multiple changes exist
+- Wrap lines at 72 characters
 
-If the changes are simple/trivial, you may omit the body.
-
-Respond with ONLY the commit message, nothing else.`;
+Output rules
+- Return ONLY the commit message
+`;
 }
 
 function parseCommitMessage(fullMessage: string): { subject: string; body: string } {
