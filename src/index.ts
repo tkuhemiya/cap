@@ -2,7 +2,7 @@
 
 import { $ } from "bun";
 import { getModel, complete, type Context, type UserMessage } from "@earendil-works/pi-ai";
-import { decryptApiKey, PROVIDER, MODEL } from "./encrypted-config";
+import { decryptApiKey, PROVIDER, MODEL } from "./encrypted-config.js";
 
 function getConfig() {
   if (!PROVIDER || !MODEL) {
@@ -56,36 +56,56 @@ async function getGitContext() {
     history = ["Initial commit"];
   }
 
-  return { diff: diff.slice(0, 50000), files, history };
+  let branch: string;
+  try {
+    branch = (await runGit(["rev-parse", "--abbrev-ref", "HEAD"])).trim();
+  } catch {
+    branch = "(detached)";
+  }
+
+  return { diff, files, history, branch };
 }
 
-function buildPrompt(ctx: { diff: string; files: string[]; history: string[] }): string {
+function buildPrompt(ctx: { diff: string; files: string[]; history: string[]; branch: string }): string {
   return `
 Generate a single conventional commit message based on the provided context.
 
-Files: ${ctx.files.join(", ")}
+<branch>
+${ctx.branch}
+</branch>
 
-Diff:
-\`\`\`diff
+<files-changed>
+${ctx.files.join(", ")}
+</files-changed>
+
+<diff>
 ${ctx.diff}
-\`\`\`
+</diff>
 
-Recent commits:
+<recent-commits>
 ${ctx.history.join("\n")}
+</recent-commits>
 
-Requirements
-- Follow Conventional Commits format: type(scope): short description
-- Scope should reflect the affected area (or be omitted if unclear)
-- Subject line must be concise and imperative
+<requirements>
+  <format>Follow Conventional Commits format: type(scope): short description</format>
+  <scope>Should reflect the affected area (or be omitted if unclear)</scope>
+  <subject>Subject line must be concise, imperative, at most 72 characters, and have no trailing period</subject>
+</requirements>
 
-Body (optional)
-- Include only if necessary to explain non-obvious changes
-- Explain WHAT changed and WHY (not HOW)
-- Use bullet points if multiple changes exist
-- Wrap lines at 72 characters
+<style>
+  <rule>Capture the primary user-visible or developer-visible change in the subject</rule>
+</style>
 
-Output rules
-- Return ONLY the commit message
+<body optional="true">
+  <rule>Include only if necessary to explain non-obvious changes</rule>
+  <rule>Explain WHAT changed and WHY (not HOW)</rule>
+  <rule>Use bullet points if multiple changes exist</rule>
+  <rule>Wrap lines at 72 characters</rule>
+</body>
+
+<output>
+  <rule>Return ONLY the commit message</rule>
+</output>
 `;
 }
 
@@ -121,23 +141,25 @@ function createUserMessage(content: string): UserMessage {
 
 async function main() {
   try {
-    console.log("📋 Reading staged changes...");
+    console.log("Reading staged changes...");
     const ctx = await getGitContext();
     console.log(`   ${ctx.files.length} files`);
 
     const config = getConfig();
-    console.log(`🤖 ${config.provider}/${config.modelId}`);
+    console.log(`Clanker: ${config.provider}/${config.modelId}`);
 
-    const model = getModel(config.provider as any, config.modelId);
-    if (!model) {
-      throw new Error(`Model ${config.provider}/${config.modelId} not found`);
-    }
+		const model = getModel(config.provider as any, config.modelId);
+		if (!model) {
+			throw new Error(`Model ${config.provider}/${config.modelId} not found`);
+		}
 
-    console.log("📝 Generating commit message...");
-    
+		console.log("Generating commit message...");
+
+    const prompt = buildPrompt(ctx)
+    console.log("token prediction:", Math.floor(prompt.length / 5.5))
     const context: Context = {
-      systemPrompt: "You are an expert at writing clear, conventional commit messages.",
-      messages: [createUserMessage(buildPrompt(ctx))],
+      systemPrompt: "You write concise git commit messages.",
+      messages: [createUserMessage(prompt)],
     };
 
     const result = await complete(model, context, { apiKey: config.apiKey });
@@ -150,13 +172,18 @@ async function main() {
     const { subject, body } = parseCommitMessage(text);
     
     // Display the message
-    console.log("\n" + "=".repeat(60));
-    console.log(subject);
+    const R = "\x1b[0m";
+    const bold = "\x1b[1m";
+    const dim = "\x1b[2m";
+    const cyan = "\x1b[36m";
+
+    console.log();
+    console.log(bold + cyan + subject + R);
     if (body) {
       console.log();
-      console.log(body);
+      console.log(dim + body + R);
     }
-    console.log("=".repeat(60) + "\n");
+    console.log();
 
     // Commit with Bun shell - handles escaping automatically
     if (body) {
@@ -164,10 +191,10 @@ async function main() {
     } else {
       await $`git commit -m ${subject}`;
     }
-    console.log("✅ Committed!");
+    console.log("Committed!");
 
   } catch (err) {
-    console.error("❌", err instanceof Error ? err.message : err);
+    console.error(err instanceof Error ? err.message : err);
     process.exit(1);
   }
 }
