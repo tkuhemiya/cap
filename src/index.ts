@@ -70,42 +70,41 @@ function buildPrompt(ctx: { diff: string; files: string[]; history: string[]; br
   return `
 Generate a single conventional commit message based on the provided context.
 
-<branch>
+## Branch
 ${ctx.branch}
-</branch>
 
-<files-changed>
+## Files Changed
 ${ctx.files.join(", ")}
-</files-changed>
 
-<diff>
+## Diff
+\`\`\`diff
 ${ctx.diff}
-</diff>
+\`\`\`
 
-<recent-commits>
+## Recent Commits
+\`\`\`
 ${ctx.history.join("\n")}
-</recent-commits>
+\`\`\`
 
-<requirements>
-  <format>Follow Conventional Commits format: type(scope): short description</format>
-  <scope>Should reflect the affected area (or be omitted if unclear)</scope>
-  <subject>Subject line must be concise, imperative, at most 72 characters, and have no trailing period</subject>
-</requirements>
+## Requirements
 
-<style>
-  <rule>Capture the primary user-visible or developer-visible change in the subject</rule>
-</style>
+- **Format**: Follow Conventional Commits format: \`type(scope): short description\`
+- **Scope**: Should reflect the affected area (or be omitted if unclear)
+- **Subject**: Subject line must be concise, imperative, at most 72 characters, and have no trailing period
+- **Style**: Capture the primary user-visible or developer-visible change in the subject
 
-<body optional="true">
-  <rule>Include only if necessary to explain non-obvious changes</rule>
-  <rule>Explain WHAT changed and WHY (not HOW)</rule>
-  <rule>Use bullet points if multiple changes exist</rule>
-  <rule>Wrap lines at 72 characters</rule>
-</body>
+## Body (optional)
 
-<output>
-  <rule>Return ONLY the commit message</rule>
-</output>
+Include only if necessary to explain non-obvious changes.
+
+- Explain **what** changed and **why** (not how)
+- Use bullet points if multiple changes exist
+- Wrap lines at 72 characters
+
+## Output Rules
+
+- Return **only** the commit message
+- No extra commentary or explanation
 `;
 }
 
