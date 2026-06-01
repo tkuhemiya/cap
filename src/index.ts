@@ -4,6 +4,12 @@ import { $ } from "bun";
 import { getModel, complete, type Context, type UserMessage } from "@earendil-works/pi-ai";
 import { decryptApiKey, PROVIDER, MODEL } from "./encrypted-config.js";
 
+// Token budget: stop sending diffs to the LLM once we exceed this
+// At ~5.5 chars/token, 100K tokens = ~550K characters
+const MAX_PROMPT_TOKENS = 100_000;
+const CHARS_PER_TOKEN = 5.5;
+const MAX_DIFF_CHARS = Math.floor(MAX_PROMPT_TOKENS * CHARS_PER_TOKEN);
+
 function getConfig() {
   if (!PROVIDER || !MODEL) {
     console.error("No encrypted API key found in binary.");
@@ -35,9 +41,9 @@ async function runGit(args: string[]): Promise<string> {
 }
 
 async function getGitContext() {
-  const diff = await runGit(["diff", "--cached"]);
-  
-  if (!diff.trim()) {
+  // Validate early: check for any staged changes at all
+  const indexDiff = await runGit(["diff", "--cached"]);
+  if (!indexDiff.trim()) {
     throw new Error("No staged changes. Run 'git add' first.");
   }
 
@@ -45,6 +51,49 @@ async function getGitContext() {
     .trim()
     .split("\n")
     .filter(Boolean);
+
+  // Build per-file diffs, minifying large ones, capped at MAX_DIFF_CHARS
+  const diffParts: string[] = [];
+  let totalChars = 0;
+  let tooLarge = false;
+  let truncatedFiles = 0;
+
+  for (const file of files) {
+    if (tooLarge) {
+      // Past the cap — don't diff at all, just note the file
+      diffParts.push(`--- a/${file}\n+++ b/${file}\n@@ ... @@\n[omitted — total diff too large]`);
+      truncatedFiles++;
+      continue;
+    }
+
+    const fileDiff = await runGit(["diff", "--cached", "--", file]);
+    const remainingBudget = MAX_DIFF_CHARS - totalChars;
+
+    if (fileDiff.length <= remainingBudget) {
+      diffParts.push(fileDiff);
+      totalChars += fileDiff.length;
+    } else if (fileDiff.length > remainingBudget) {
+      // This individual file is too big — show stats instead
+      const stat = await runGit(["diff", "--cached", "--stat", "--", file]);
+      diffParts.push(`--- a/${file}\n+++ b/${file}\n@@ ... @@\n${stat.trim()}`);
+      truncatedFiles++;
+
+      // After adding the stat line, check if we're over budget
+      if (totalChars >= MAX_DIFF_CHARS) {
+        tooLarge = true;
+      }
+    }
+  }
+
+  let diff = diffParts.join("\n");
+
+  // If truncation happened, append a note for the LLM
+  if (truncatedFiles > 0) {
+    const note = `\n# Note: The diff was truncated to ${MAX_PROMPT_TOKENS.toLocaleString()} tokens. ` +
+      `${truncatedFiles} file(s) have stats-only summaries above. ` +
+      `Use the file list and stats to infer the scope of the change.`;
+    diff += note;
+  }
 
   let history: string[] = [];
   try {
