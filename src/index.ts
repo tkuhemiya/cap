@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 import { $ } from "bun";
-import { getModel, complete, type Context, type UserMessage } from "@earendil-works/pi-ai";
+import { getModel, complete, type Context, type UserMessage } from "@earendil-works/pi-ai/compat";
 import { decryptApiKey, PROVIDER, MODEL } from "./encrypted-config.js";
 
 // Token budget: stop sending diffs to the LLM once we exceed this
@@ -117,7 +117,7 @@ async function getGitContext() {
 
 function buildPrompt(ctx: { diff: string; files: string[]; history: string[]; branch: string }): string {
   return `
-Generate a single conventional commit message based on the provided context.
+Generate a single commit message based on the provided context.
 
 ## Branch
 ${ctx.branch}
@@ -137,9 +137,8 @@ ${ctx.history.join("\n")}
 
 ## Requirements
 
-- **Format**: Follow Conventional Commits format: \`type(scope): short description\`
+- **Format**: No need to Follow Conventional Commits formats, Be chill and descriptive, keep it short, You don't need to mention accurately the exact changes we did. Just mention what is different from the project now after we did the commit message. 
 - **Scope**: Should reflect the affected area (or be omitted if unclear)
-- **Subject**: Subject line must be concise, imperative, at most 72 characters, and have no trailing period
 - **Style**: Capture the primary user-visible or developer-visible change in the subject
 
 ## Body (optional)

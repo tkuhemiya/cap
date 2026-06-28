@@ -8,18 +8,16 @@
   },
   "scripts": {
     "setup": "bun run scripts/build-encrypt.ts",
-    "compile": "bun build src/index.ts --compile --outfile cap",
-    "build": "bun run compile",
-    "build:encrypt": "bun run setup && bun run compile",
-    "install:global": "bun run build && ./install.sh",
+    "build": "bun build src/index.ts --compile --outfile cap",
+    "install:global": "./install.sh",
     "dev": "bun run src/index.ts"
   },
   "dependencies": {
-    "@earendil-works/pi-ai": "^0.75.3",
+    "@earendil-works/pi-ai": "^0.80.2",
     "enquirer": "^2.4.1"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0",
-    "typescript": "^5.0.0"
+    "@types/node": "^26.0.1",
+    "typescript": "^6.0.3"
   }
 }

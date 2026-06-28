@@ -8,7 +8,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { fileURLToPath } from "url";
 import Enquirer from "enquirer";
-import { getProviders, getModels, type Model, type KnownProvider } from "@earendil-works/pi-ai";
+import { getProviders, getModels, type Model, type KnownProvider } from "@earendil-works/pi-ai/compat";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
