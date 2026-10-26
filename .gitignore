@@ -1,4 +1,6 @@
 cap
+build/
+baml_sdk/
 .env
 .DS_Store
 *.o
