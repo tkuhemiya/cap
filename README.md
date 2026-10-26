@@ -5,15 +5,11 @@ Generate commit messages with AI using DeepSeek.
 ## Build
 
 ```bash
-# Runtime key (preferred)
-export DEEPSEEK_API_KEY=sk-xxx
-go build -o cap .
-
-# Or bake the key into the binary
 DEEPSEEK_API_KEY=sk-xxx go build -ldflags="-X main.apiKey=$DEEPSEEK_API_KEY" -o cap .
-
 ./install.sh
 ```
+
+The key lives in the binary after that. `cap` does not need `DEEPSEEK_API_KEY` in the environment. The env var is only a fallback if you run an unbaked build (`go run .`).
 
 Requires Go 1.22+.
 

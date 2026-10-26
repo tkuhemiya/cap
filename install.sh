@@ -25,8 +25,7 @@ fi
 
 if [ ! -f "./cap" ]; then
     echo -e "${RED}❌ Binary not found. Build first:${NC}"
-    echo "   go build -o cap ."
-    echo "   # or: DEEPSEEK_API_KEY=sk-xxx go build -ldflags=\"-X main.apiKey=\$DEEPSEEK_API_KEY\" -o cap ."
+    echo "   go build -ldflags=\"-X main.apiKey=\$DEEPSEEK_API_KEY\" -o cap ."
     exit 1
 fi
 
@@ -38,5 +37,4 @@ echo ""
 echo "Usage:"
 echo "  cap"
 echo ""
-echo "Set DEEPSEEK_API_KEY unless you baked the key in at build time."
 echo "To uninstall: rm $INSTALL_DIR/cap"
