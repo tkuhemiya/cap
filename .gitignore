@@ -1,6 +1,9 @@
 # Go binary
 cap
 
+# Generated BAML client (when/if `baml-cli generate` is wired)
+baml_client/
+
 # Environment
 .env
 

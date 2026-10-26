@@ -81,8 +81,9 @@ func getGitContext() (*gitContext, error) {
 			if err != nil {
 				stat = file
 			}
-			diffParts = append(diffParts,
-				fmt.Sprintf("--- a/%s\n+++ b/%s\n@@ ... @@\n%s", file, file, strings.TrimSpace(stat)))
+			summary := fmt.Sprintf("--- a/%s\n+++ b/%s\n@@ ... @@\n%s", file, file, strings.TrimSpace(stat))
+			diffParts = append(diffParts, summary)
+			totalChars += len(summary)
 			truncatedFiles++
 			if totalChars >= maxDiffChars {
 				tooLarge = true
@@ -126,5 +127,3 @@ func getGitContext() (*gitContext, error) {
 		branch:       branch,
 	}, nil
 }
-
-

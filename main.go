@@ -1,16 +1,23 @@
 package main
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
 	"os"
 	"strings"
+	"time"
 )
 
 const maxPromptTokens = 100_000
 const charsPerToken = 5.5
 const maxDiffChars = int(maxPromptTokens * charsPerToken)
 
+// apiKey can be injected at build time:
+//
+//	go build -ldflags="-X main.apiKey=$DEEPSEEK_API_KEY" -o cap .
+//
+// Runtime DEEPSEEK_API_KEY takes precedence so the binary can be rebuilt
+// without baking a key in.
 var apiKey string
 
 type commitMessage struct {
@@ -19,9 +26,11 @@ type commitMessage struct {
 }
 
 func main() {
-	if apiKey == "" {
+	key := resolveAPIKey()
+	if key == "" {
 		fmt.Fprintln(os.Stderr, "No API key configured.")
-		fmt.Fprintln(os.Stderr, "  Build with: DEEPSEEK_API_KEY=sk-xxx go build -ldflags=\"-X main.apiKey=$DEEPSEEK_API_KEY\" -o cap")
+		fmt.Fprintln(os.Stderr, "  Set DEEPSEEK_API_KEY, or build with:")
+		fmt.Fprintln(os.Stderr, "  DEEPSEEK_API_KEY=sk-xxx go build -ldflags=\"-X main.apiKey=$DEEPSEEK_API_KEY\" -o cap .")
 		os.Exit(1)
 	}
 
@@ -32,31 +41,19 @@ func main() {
 		os.Exit(1)
 	}
 	fmt.Printf("   %d files\n", len(ctx.files))
-	fmt.Printf("   model: deepseek/deepseek-v4-flash\n")
+	fmt.Printf("   model: deepseek/%s\n", model)
 
 	prompt := buildPrompt(ctx)
 	tokens := int(float64(len(prompt)) / charsPerToken)
 	fmt.Printf("   token estimate: %d\n", tokens)
 
 	fmt.Println("Generating commit message...")
-	text, err := callDeepSeek(ctx.systemPrompt, prompt)
+	reqCtx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	msg, err := generateCommitMessage(reqCtx, key, ctx)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-	if text == "" {
-		fmt.Fprintln(os.Stderr, "Empty response from API. Try again.")
-		os.Exit(1)
-	}
-	text = stripCodeFences(text)
-
-	var msg commitMessage
-	if err := json.Unmarshal([]byte(text), &msg); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to parse response: %v\n  Response: %s\n", err, text)
-		os.Exit(1)
-	}
-	if msg.Subject == "" {
-		fmt.Fprintln(os.Stderr, "Empty subject in response. Try again.")
 		os.Exit(1)
 	}
 
@@ -90,15 +87,9 @@ func main() {
 	fmt.Println("Committed!")
 }
 
-func stripCodeFences(s string) string {
-	s = strings.TrimSpace(s)
-	if strings.HasPrefix(s, "```") {
-		lines := strings.SplitN(s, "\n", 2)
-		if len(lines) == 2 {
-			s = lines[1]
-		}
+func resolveAPIKey() string {
+	if k := strings.TrimSpace(os.Getenv("DEEPSEEK_API_KEY")); k != "" {
+		return k
 	}
-	s = strings.TrimSuffix(s, "```")
-	return strings.TrimSpace(s)
+	return strings.TrimSpace(apiKey)
 }
-// test
