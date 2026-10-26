@@ -62,7 +62,7 @@ test SampleRewrite {
       +++ b/main.go
       @@ -1 +1 @@
       -// test
-      +func resolveAPIKey() string { ... }
+      +var apiKey string // injected via -ldflags -X main.apiKey
     "#
     history ["Rewrite CLI in Go, remove TypeScript/Bun dependencies"]
   }

@@ -11,6 +11,9 @@ client DeepSeekFlash {
   retry_policy Exponential
   options {
     base_url "https://api.deepseek.com"
+    // When the Go client is generated, pass the baked-in key with
+    // b.WithEnv(map[string]string{"DEEPSEEK_API_KEY": apiKey}).
+    // cap itself never reads this from the process environment.
     api_key env.DEEPSEEK_API_KEY
     model "deepseek-v4-flash"
   }

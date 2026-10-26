@@ -9,7 +9,7 @@ DEEPSEEK_API_KEY=sk-xxx go build -ldflags="-X main.apiKey=$DEEPSEEK_API_KEY" -o 
 ./install.sh
 ```
 
-The key lives in the binary after that. `cap` does not need `DEEPSEEK_API_KEY` in the environment. The env var is only a fallback if you run an unbaked build (`go run .`).
+The key is compiled into the binary. Runtime `DEEPSEEK_API_KEY` is ignored.
 
 Requires Go 1.22+.
 

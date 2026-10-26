@@ -12,11 +12,9 @@ const maxPromptTokens = 100_000
 const charsPerToken = 5.5
 const maxDiffChars = int(maxPromptTokens * charsPerToken)
 
-// apiKey is baked in at build time (same as the original CLI):
+// apiKey is injected at build time only:
 //
 //	go build -ldflags="-X main.apiKey=$DEEPSEEK_API_KEY" -o cap .
-//
-// DEEPSEEK_API_KEY is only a fallback for `go run` / unbaked binaries.
 var apiKey string
 
 type commitMessage struct {
@@ -25,8 +23,7 @@ type commitMessage struct {
 }
 
 func main() {
-	key := resolveAPIKey()
-	if key == "" {
+	if apiKey == "" {
 		fmt.Fprintln(os.Stderr, "No API key configured.")
 		fmt.Fprintln(os.Stderr, "  Build with: DEEPSEEK_API_KEY=sk-xxx go build -ldflags=\"-X main.apiKey=$DEEPSEEK_API_KEY\" -o cap .")
 		os.Exit(1)
@@ -49,7 +46,7 @@ func main() {
 	reqCtx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	msg, err := generateCommitMessage(reqCtx, key, ctx)
+	msg, err := generateCommitMessage(reqCtx, apiKey, ctx)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -83,11 +80,4 @@ func main() {
 		os.Exit(1)
 	}
 	fmt.Println("Committed!")
-}
-
-func resolveAPIKey() string {
-	if k := strings.TrimSpace(apiKey); k != "" {
-		return k
-	}
-	return strings.TrimSpace(os.Getenv("DEEPSEEK_API_KEY"))
 }
