@@ -1,38 +1,23 @@
-#!/bin/bash
+#!/bin/sh
 set -e
 
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
+if [ -z "$DEEPSEEK_API_KEY" ]; then
+	echo "Build with: DEEPSEEK_API_KEY=sk-xxx ./install.sh"
+	exit 1
+fi
 
-echo "Installing cap..."
+cc -O2 -Wall -o cap cap.c -lcurl -DAPI_KEY="\"$DEEPSEEK_API_KEY\""
 
 if [ -d "$HOME/.local/bin" ]; then
-    INSTALL_DIR="$HOME/.local/bin"
+	DEST="$HOME/.local/bin"
 elif [ -d "$HOME/bin" ]; then
-    INSTALL_DIR="$HOME/bin"
+	DEST="$HOME/bin"
 else
-    INSTALL_DIR="$HOME/.local/bin"
-    mkdir -p "$INSTALL_DIR"
+	DEST="$HOME/.local/bin"
+	mkdir -p "$DEST"
 fi
 
-if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
-    echo -e "${YELLOW}$INSTALL_DIR is not in your PATH${NC}"
-    echo "   Add this to your shell profile:"
-    echo "   export PATH=\"$INSTALL_DIR:\$PATH\""
-fi
-
-if [ ! -f "./cap" ]; then
-    echo -e "${RED}Binary not found. Build first:${NC}"
-    echo "   make DEEPSEEK_API_KEY=sk-xxx"
-    exit 1
-fi
-
-cp ./cap "$INSTALL_DIR/cap"
-chmod +x "$INSTALL_DIR/cap"
-
-echo -e "${GREEN}Installed to $INSTALL_DIR/cap${NC}"
-echo ""
-echo "Usage: cap"
-echo "To uninstall: rm $INSTALL_DIR/cap"
+cp cap "$DEST/cap"
+chmod +x "$DEST/cap"
+echo "Installed $DEST/cap"
+echo "Usage: git add . && cap"

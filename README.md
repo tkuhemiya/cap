@@ -1,29 +1,13 @@
 # cap
 
-Generate commit messages with DeepSeek. One C file.
+C CLI. DeepSeek writes the commit message.
 
-BAML has no C SDK (the “C” layer is an internal protobuf FFI used by Python/Go/Ruby). There is also no native DeepSeek provider — DeepSeek is OpenAI-compatible, so BAML’s `openai-generic` client is the match. `cap.c` talks to that same endpoint; `baml_src/` is the typed schema if you later generate a client.
-
-## Build
-
-Needs `gcc` and `libcurl`.
+BAML has no C client, so it cannot parse anything here. The HTTP JSON envelope is DeepSeek’s; the commit message itself is plain text (subject, optional body). `baml_src/` is the same prompt for the playground.
 
 ```bash
-make DEEPSEEK_API_KEY=sk-xxx
-./install.sh
-```
-
-The key is compiled in. Runtime env is ignored.
-
-## Usage
-
-```bash
+DEEPSEEK_API_KEY=sk-xxx ./install.sh
 git add .
 cap
 ```
 
-## Uninstall
-
-```bash
-rm ~/.local/bin/cap
-```
+Needs `cc` and `libcurl`. Key is compiled in.
