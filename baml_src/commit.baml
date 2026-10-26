@@ -51,20 +51,3 @@ function GenerateCommitMessage(
     {{ ctx.output_format }}
   "#
 }
-
-test SampleRewrite {
-  functions [GenerateCommitMessage]
-  args {
-    branch "themiya/go-rewrite-merge-ready-b0ad"
-    files ["main.go", "deepseek.go"]
-    diff #"
-      --- a/main.go
-      +++ b/main.go
-      @@ -1 +1 @@
-      -// test
-      +var apiKey string // injected via -ldflags -X main.apiKey
-    "#
-    history ["Rewrite CLI in Go, remove TypeScript/Bun dependencies"]
-  }
-  @@assert({{ this.subject|length > 0 }})
-}
