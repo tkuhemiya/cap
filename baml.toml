@@ -1,0 +1,6 @@
+[package]
+name = "cap"
+
+[generator.client1]
+output_type = "cpp"
+naming_convention = "preserve-case"

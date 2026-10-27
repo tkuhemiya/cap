@@ -1,47 +1,67 @@
-#!/bin/bash
-# Install cap to a bin directory
-
+#!/bin/sh
 set -e
 
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+if [ -z "$DEEPSEEK_API_KEY" ]; then
+	echo "Build with: DEEPSEEK_API_KEY=sk-xxx ./install.sh"
+	exit 1
+fi
 
-echo "🔧 Installing cap..."
+if ! command -v baml >/dev/null 2>&1; then
+	curl -fsSL https://pkg.boundaryml.com/install.sh | sh -s
+	# shellcheck disable=SC1091
+	. "$HOME/.baml/env"
+fi
 
-# Determine install location
+if ! command -v cmake >/dev/null 2>&1; then
+	echo "cmake is required"
+	exit 1
+fi
+
+baml generate --agent-skill-check off
+
+# Shared runtime the C++ SDK dlopens. Name it libbridge_cffi.so next to cap.
+arch=$(uname -m)
+case "$(uname -s)-$arch" in
+	Linux-x86_64) so=libbaml_cffi-x86_64-unknown-linux-gnu.so ;;
+	Linux-aarch64) so=libbaml_cffi-aarch64-unknown-linux-gnu.so ;;
+	Darwin-arm64) so=libbaml_cffi-aarch64-apple-darwin.dylib ;;
+	Darwin-x86_64) so=libbaml_cffi-x86_64-apple-darwin.dylib ;;
+	*)
+		echo "unsupported platform: $(uname -s) $arch"
+		exit 1
+		;;
+esac
+ver=$(baml --version | awk '/toolchain/{print $3}')
+mkdir -p build
+if [ ! -f build/libbridge_cffi.so ] && [ ! -f build/libbridge_cffi.dylib ]; then
+	curl -fsSL -o "build/$so" \
+		"https://github.com/BoundaryML/baml/releases/download/baml-language-${ver}/$so"
+	case "$so" in
+		*.dylib) mv "build/$so" build/libbridge_cffi.dylib ;;
+		*) mv "build/$so" build/libbridge_cffi.so ;;
+	esac
+fi
+
+export CXX="${CXX:-g++}"
+cmake -B build -DDEEPSEEK_API_KEY="$DEEPSEEK_API_KEY"
+cmake --build build
+
 if [ -d "$HOME/.local/bin" ]; then
-    INSTALL_DIR="$HOME/.local/bin"
+	DEST="$HOME/.local/bin"
 elif [ -d "$HOME/bin" ]; then
-    INSTALL_DIR="$HOME/bin"
+	DEST="$HOME/bin"
 else
-    INSTALL_DIR="$HOME/.local/bin"
-    mkdir -p "$INSTALL_DIR"
+	DEST="$HOME/.local/bin"
+	mkdir -p "$DEST"
 fi
 
-# Check if install dir is in PATH
-if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
-    echo -e "${YELLOW}⚠️  $INSTALL_DIR is not in your PATH${NC}"
-    echo "   Add this to your shell profile:"
-    echo "   export PATH=\"$INSTALL_DIR:\$PATH\""
-    echo ""
+cp build/cap "$DEST/cap"
+chmod +x "$DEST/cap"
+if [ -f build/libbridge_cffi.so ]; then
+	cp build/libbridge_cffi.so "$DEST/"
 fi
-
-# Copy binary
-if [ ! -f "./cap" ]; then
-    echo -e "${RED}❌ Binary not found. Run 'bun run build' first${NC}"
-    exit 1
+if [ -f build/libbridge_cffi.dylib ]; then
+	cp build/libbridge_cffi.dylib "$DEST/"
 fi
-
-cp ./cap "$INSTALL_DIR/cap"
-chmod +x "$INSTALL_DIR/cap"
-
-echo -e "${GREEN}✅ Installed to $INSTALL_DIR/cap${NC}"
-echo ""
-echo "Usage:"
-echo "  cap           # Generate commit for staged changes"
-echo ""
-echo "To reinstall: bun run install:global"
-echo "To uninstall: rm $INSTALL_DIR/cap"
+echo "Installed $DEST/cap"
+echo "Usage: git add . && cap"
